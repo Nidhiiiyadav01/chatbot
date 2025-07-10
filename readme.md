@@ -43,12 +43,7 @@ It simulates an intelligent recipe assistant that responds to user messages and 
 
 ---
 
-## 👩‍💻 Contributors
 
-- [Nidhi Yadav](https://github.com/Nidhiiiyadav01) – Chatbot Development
-- [Shreya], [Twinkle], and team – Integration, UI design, and guidance
 
----
 
-## 📂 Folder Structure
 
