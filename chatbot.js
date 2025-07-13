@@ -1,35 +1,34 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.getElementById("sendBtn").addEventListener("click", () => {
   const input = document.getElementById("userInput");
-  const sendBtn = document.getElementById("sendBtn");
-  const chatBody = document.querySelector(".chat-body");
-
-  function addMessage(sender, text) {
-    const msg = document.createElement("div");
-    msg.className = `message ${sender}`;
-    msg.textContent = text;
-    chatBody.appendChild(msg);
-    chatBody.scrollTop = chatBody.scrollHeight;
-  }
-
-  function getBotReply(message) {
-    const msg = message.toLowerCase();
-    if (msg.includes("recipe")) {
-      return "Tell me the ingredients, and I’ll suggest something yummy! 🍝";
-    } else if (msg.includes("hello") || msg.includes("hi")) {
-      return "Hi there! I’m ForkBot 🤖🍴";
-    } else if (msg.includes("thank")) {
-      return "You're welcome! 😊";
-    } else {
-      return "I'm your food buddy! Ask me for recipes or food tips.";
-    }
-  }
-
-  sendBtn.addEventListener("click", () => {
-    const userMsg = input.value.trim();
-    if (userMsg === "") return;
-    addMessage("user", userMsg);
-    const reply = getBotReply(userMsg);
-    setTimeout(() => addMessage("bot", reply), 500);
+  const message = input.value.trim();
+  if (message) {
+    addMessage("user", message);
+    respondToUser(message);
     input.value = "";
-  });
+  }
 });
+
+function addMessage(sender, text) {
+  const chatBody = document.getElementById("chatBody");
+  const msgDiv = document.createElement("div");
+  msgDiv.classList.add("message", sender);
+  msgDiv.textContent = text;
+  chatBody.appendChild(msgDiv);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+function respondToUser(message) {
+  let response = "";
+
+  if (message.toLowerCase().includes("pasta")) {
+    response = "Here's a simple pasta recipe: Boil pasta, sauté garlic in olive oil, add tomatoes and mix with pasta.";
+  } else if (message.toLowerCase().includes("egg")) {
+    response = "You can make a classic omelette: beat eggs, add salt, pour in pan, flip once, and serve hot!";
+  } else if (message.toLowerCase().includes("paneer")) {
+    response = "Try making Paneer Bhurji: crumble paneer, cook with onions, tomatoes, and spices.";
+  } else {
+    response = "Sorry, I'm still learning! Try asking for a recipe with pasta, egg, or paneer.";
+  }
+
+  setTimeout(() => addMessage("bot", response), 600);
+}
