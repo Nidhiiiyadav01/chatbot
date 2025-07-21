@@ -75,5 +75,30 @@ body {
   padding: 10px 15px;
   cursor: pointer;
 }
+.recipe-card {
+  background-color: #fde9e9;
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 95%;
+}
+
+.recipe-card img.recipe-img {
+  width: 100%;
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+.recipe-card ul {
+  padding-left: 20px;
+  margin-top: 5px;
+}
+
+.recipe-card p {
+  margin-top: 5px;
+  white-space: pre-line;
+}
 
 
