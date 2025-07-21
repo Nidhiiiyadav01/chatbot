@@ -1,90 +1,100 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const input = document.getElementById("userInput");
-  const sendBtn = document.getElementById("sendBtn");
-  const chatBody = document.querySelector(".chat-body");
+const chatBody = document.querySelector('.chat-body');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
 
-  let currentIngredients = "";
+let isVegSelected = null;
 
-  function addMessage(sender, text) {
-    const msg = document.createElement("div");
-    msg.className = `message ${sender}`;
-    msg.textContent = text;
-    chatBody.appendChild(msg);
-    chatBody.scrollTop = chatBody.scrollHeight;
-  }
+// Show loading message
+function showLoadingMessage() {
+  const loadingDiv = document.createElement('div');
+  loadingDiv.classList.add('message', 'bot');
+  loadingDiv.id = 'loading';
+  loadingDiv.innerHTML = 'Loading recipes... 🍲';
+  chatBody.appendChild(loadingDiv);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
 
-  function addRecipeCard(title, image, instructions) {
-    const card = document.createElement("div");
-    card.className = "message bot";
-    card.innerHTML = `
-      <strong>${title}</strong><br/>
-      <img src="${image}" alt="${title}" style="max-width: 100%; border-radius: 10px; margin: 8px 0;" /><br/>
-      <p>${instructions}</p>
-    `;
-    chatBody.appendChild(card);
-    chatBody.scrollTop = chatBody.scrollHeight;
-  }
+// Remove loading message
+function removeLoadingMessage() {
+  const loadingDiv = document.getElementById('loading');
+  if (loadingDiv) chatBody.removeChild(loadingDiv);
+}
 
-  function showLoading() {
-    const loading = document.createElement("div");
-    loading.className = "message bot loading";
-    loading.textContent = "Loading recipe...";
-    chatBody.appendChild(loading);
-    chatBody.scrollTop = chatBody.scrollHeight;
-    return loading;
-  }
+// Display message in chat
+function displayMessage(message, sender = 'bot') {
+  const messageDiv = document.createElement('div');
+  messageDiv.classList.add('message', sender);
+  messageDiv.innerHTML = message;
+  chatBody.appendChild(messageDiv);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
 
-  async function fetchRecipe(ingredients, type) {
-    const loadingElem = showLoading();
-    let query = ingredients.split(",")[0].trim();
+// Ask veg/non-veg choice inside chat
+function askVegPreference() {
+  displayMessage("Would you like vegetarian or non-vegetarian recipes? Type <b>veg</b> or <b>non-veg</b> 🍛");
+}
 
-    const url =
-      type.toLowerCase() === "veg"
-        ? `https://www.themealdb.com/api/json/v1/1/filter.php?i=${query}`
-        : `https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`;
+async function fetchRecipe(ingredient) {
+  try {
+    showLoadingMessage();
 
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      loadingElem.remove();
-
-      if (!data.meals || data.meals.length === 0) {
-        addMessage("bot", "Sorry, I couldn’t find a recipe with those ingredients.");
-        return;
-      }
-
-      const meal = data.meals[0];
-      const mealId = meal.idMeal;
-
-      const fullDetailsRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${mealId}`);
-      const fullDetailsData = await fullDetailsRes.json();
-      const mealDetails = fullDetailsData.meals[0];
-
-      addRecipeCard(mealDetails.strMeal, mealDetails.strMealThumb, mealDetails.strInstructions);
-    } catch (error) {
-      loadingElem.remove();
-      addMessage("bot", "Oops! Something went wrong.");
-    }
-  }
-
-  sendBtn.addEventListener("click", () => {
-    const userMsg = input.value.trim();
-    if (!userMsg) return;
-
-    addMessage("user", userMsg);
-
-    if (!currentIngredients) {
-      currentIngredients = userMsg;
-      addMessage("bot", "Got it! Is this for a vegetarian or non-vegetarian recipe?");
-    } else if (["veg", "non-veg", "vegetarian", "non vegetarian"].includes(userMsg.toLowerCase())) {
-      fetchRecipe(currentIngredients, userMsg);
-      currentIngredients = ""; // reset after recipe is fetched
+    let apiURL;
+    if (isVegSelected === 'veg') {
+      apiURL = `https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredient}`;
     } else {
-      addMessage("bot", "Please tell me the ingredients you'd like to cook with.");
+      apiURL = `https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredient}`;
     }
 
-    input.value = "";
-  });
+    const response = await fetch(apiURL);
+    const data = await response.json();
+    removeLoadingMessage();
+
+    if (data.meals) {
+      const randomMeal = data.meals[Math.floor(Math.random() * data.meals.length)];
+
+      // Get meal details
+      const detailRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${randomMeal.idMeal}`);
+      const detailData = await detailRes.json();
+      const meal = detailData.meals[0];
+
+      displayMessage(`
+        <b>${meal.strMeal}</b><br>
+        <img src="${meal.strMealThumb}" alt="Recipe Image" width="200"><br>
+        <b>Instructions:</b> ${meal.strInstructions.slice(0, 300)}...
+      `);
+    } else {
+      displayMessage("Sorry, I couldn't find any recipes for those ingredients. 🍽️");
+    }
+  } catch (error) {
+    removeLoadingMessage();
+    displayMessage("Oops! Something went wrong. Please try again.");
+  }
+}
+
+// Handle user input
+sendBtn.addEventListener('click', () => {
+  const input = userInput.value.trim().toLowerCase();
+  if (!input) return;
+
+  displayMessage(input, 'user');
+  userInput.value = '';
+
+  if (isVegSelected === null) {
+    if (input.includes('veg')) {
+      isVegSelected = 'veg';
+      displayMessage("Great! I'll show you vegetarian recipes. 🥦");
+    } else if (input.includes('non')) {
+      isVegSelected = 'non-veg';
+      displayMessage("Got it! I'll show you non-vegetarian recipes. 🍗");
+    } else {
+      askVegPreference();
+      return;
+    }
+    return;
+  }
+
+  fetchRecipe(input);
 });
+
 
 
