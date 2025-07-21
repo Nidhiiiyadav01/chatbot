@@ -1,85 +1,99 @@
-document.getElementById("chat-form").addEventListener("submit", async function (e) {
-  e.preventDefault();
+const chatContainer = document.querySelector('.chat-container');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
 
-  const userInput = document.getElementById("user-input").value.trim();
-  if (!userInput) return;
-
-  appendMessage("user", userInput);
-  document.getElementById("user-input").value = "";
-
-  appendMessage("bot", "Loading recipes... 🍳");
-
-  try {
-    const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${encodeURIComponent(userInput)}`);
-    const data = await response.json();
-
-    clearLoading();
-
-    if (!data.meals) {
-      appendMessage("bot", "Sorry, I couldn't find any recipes for those ingredients. 🍽️");
-      return;
-    }
-
-    const maxResults = 2; // number of recipes to show
-    const mealsToShow = data.meals.slice(0, maxResults);
-
-    for (let meal of mealsToShow) {
-      const detailsRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`);
-      const detailsData = await detailsRes.json();
-      const detailedMeal = detailsData.meals[0];
-
-      const ingredients = [];
-      for (let i = 1; i <= 20; i++) {
-        const ingredient = detailedMeal[`strIngredient${i}`];
-        const measure = detailedMeal[`strMeasure${i}`];
-        if (ingredient && ingredient.trim()) {
-          ingredients.push(`${ingredient} - ${measure}`.trim());
-        }
-      }
-
-      const recipeHTML = `
-        <div class="recipe-card">
-          <img src="${detailedMeal.strMealThumb}" alt="${detailedMeal.strMeal}" />
-          <h3>🍽️ ${detailedMeal.strMeal}</h3>
-          <p><strong>Ingredients:</strong></p>
-          <ul>${ingredients.map(i => `<li>${i}</li>`).join("")}</ul>
-          <p><strong>Instructions:</strong><br>${detailedMeal.strInstructions}</p>
-        </div>
-      `;
-
-      appendCustomMessage(recipeHTML);
-    }
-  } catch (error) {
-    clearLoading();
-    appendMessage("bot", "Oops! Something went wrong. Please try again later. ⚠️");
+sendBtn.addEventListener('click', () => {
+  const message = userInput.value.trim();
+  if (message) {
+    addMessage(message, 'user');
+    fetchRecipes(message);
+    userInput.value = '';
   }
 });
 
-function appendMessage(sender, message) {
-  const chatBox = document.getElementById("chat-box");
-  const messageDiv = document.createElement("div");
-  messageDiv.className = sender === "user" ? "user-message" : "bot-message";
-  messageDiv.innerHTML = `<p>${message}</p>`;
-  chatBox.appendChild(messageDiv);
-  chatBox.scrollTop = chatBox.scrollHeight;
+function addMessage(text, sender) {
+  const messageElement = document.createElement('div');
+  messageElement.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+  messageElement.innerHTML = text;
+  chatContainer.appendChild(messageElement);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-function appendCustomMessage(html) {
-  const chatBox = document.getElementById("chat-box");
-  const customDiv = document.createElement("div");
-  customDiv.className = "bot-message";
-  customDiv.innerHTML = html;
-  chatBox.appendChild(customDiv);
-  chatBox.scrollTop = chatBox.scrollHeight;
+function addLoadingMessage() {
+  const loading = document.createElement('div');
+  loading.classList.add('message', 'bot-message');
+  loading.setAttribute('id', 'loading-msg');
+  loading.innerHTML = "Loading recipes... 🍳";
+  chatContainer.appendChild(loading);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-function clearLoading() {
-  const chatBox = document.getElementById("chat-box");
-  const last = chatBox.lastChild;
-  if (last && last.innerText.includes("Loading recipes")) {
-    chatBox.removeChild(last);
+function removeLoadingMessage() {
+  const loading = document.getElementById('loading-msg');
+  if (loading) chatContainer.removeChild(loading);
+}
+
+async function fetchRecipes(ingredientText) {
+  addLoadingMessage();
+
+  const ingredients = ingredientText
+    .toLowerCase()
+    .split(/[ ,]+/)
+    .filter(word => word.length > 2); // Avoid filler words
+
+  let found = false;
+
+  for (const ing of ingredients) {
+    try {
+      const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ing}`);
+      const data = await res.json();
+
+      if (data.meals) {
+        found = true;
+
+        const mealsToShow = data.meals.slice(0, 3); // Limit to 3 recipes
+        for (const meal of mealsToShow) {
+          const detailRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`);
+          const detailData = await detailRes.json();
+          const mealInfo = detailData.meals[0];
+
+          const recipeCard = `
+            <div class="recipe-card">
+              <h3>🍽️ ${mealInfo.strMeal}</h3>
+              <img src="${mealInfo.strMealThumb}" alt="${mealInfo.strMeal}" class="recipe-img">
+              <div><strong>Ingredients:</strong><ul>
+                ${getIngredientsList(mealInfo)}
+              </ul></div>
+              <div><strong>Instructions:</strong><p>${mealInfo.strInstructions}</p></div>
+            </div>
+          `;
+          addMessage(recipeCard, 'bot');
+        }
+      }
+    } catch (err) {
+      console.error("API error for ingredient:", ing, err);
+    }
+  }
+
+  removeLoadingMessage();
+
+  if (!found) {
+    addMessage("Sorry, I couldn't find any recipes for those ingredients. 🍽️", 'bot');
   }
 }
+
+function getIngredientsList(meal) {
+  let list = '';
+  for (let i = 1; i <= 20; i++) {
+    const ingredient = meal[`strIngredient${i}`];
+    const measure = meal[`strMeasure${i}`];
+    if (ingredient && ingredient.trim() !== '') {
+      list += `<li>${ingredient} - ${measure}</li>`;
+    }
+  }
+  return list;
+}
+
 
 
 
