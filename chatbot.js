@@ -3,7 +3,7 @@ document.getElementById("sendBtn").addEventListener("click", () => {
   const message = input.value.trim();
   if (message) {
     addMessage("user", message);
-    fetchRecipe(message);  // <-- Fetch from TheMealDB
+    fetchRecipe(message);  // <-- NEW: API call
     input.value = "";
   }
 });
@@ -17,22 +17,23 @@ function addMessage(sender, text) {
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-// 🔥 New function to fetch recipe
+// 🔥 This fetches real data from TheMealDB
 function fetchRecipe(ingredient) {
   fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredient}`)
     .then((response) => response.json())
     .then((data) => {
       if (data.meals) {
-        const meal = data.meals[0]; // take the first meal
-        const reply = `🍽 Try this: ${meal.strMeal}\n👀 View here: ${meal.strMealThumb}`;
+        const meal = data.meals[0];
+        const reply = `🍽 Recipe: ${meal.strMeal}\n📷 Image: ${meal.strMealThumb}`;
         addMessage("bot", reply);
       } else {
-        addMessage("bot", "❌ Sorry, no recipe found with that ingredient.");
+        addMessage("bot", "❌ No recipes found for that ingredient.");
       }
     })
     .catch((error) => {
       console.error("API error:", error);
-      addMessage("bot", "⚠️ Something went wrong. Try again later.");
+      addMessage("bot", "⚠️ Error fetching recipe. Try again later.");
     });
 }
+
 
