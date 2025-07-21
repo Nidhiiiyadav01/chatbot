@@ -1,78 +1,92 @@
-const chatContainer = document.querySelector(".chat-container");
-const userInput = document.getElementById("user-input");
-const sendButton = document.getElementById("send-btn");
+document.addEventListener("DOMContentLoaded", function () {
+  const sendBtn = document.getElementById("sendBtn");
+  const userInput = document.getElementById("userInput");
+  const chatBody = document.querySelector(".chat-body");
 
-sendButton.addEventListener("click", () => {
-  const input = userInput.value.trim();
-  if (input) {
-    appendMessage("user", input);
-    fetchRecipe(input);
-    userInput.value = "";
+  function appendMessage(content, sender = "bot") {
+    const messageDiv = document.createElement("div");
+    messageDiv.classList.add("message", sender);
+    messageDiv.innerHTML = content;
+    chatBody.appendChild(messageDiv);
+    chatBody.scrollTop = chatBody.scrollHeight;
   }
-});
 
-userInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    sendButton.click();
-  }
-});
+  async function fetchRecipes(ingredient) {
+    appendMessage("🔄 Loading recipes...", "bot");
 
-function appendMessage(sender, message) {
-  const messageDiv = document.createElement("div");
-  messageDiv.classList.add("message", `${sender}-message`);
-  messageDiv.innerHTML = message;
-  chatContainer.appendChild(messageDiv);
-  chatContainer.scrollTop = chatContainer.scrollHeight;
-}
+    try {
+      const response = await fetch(
+        `https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredient}`
+      );
+      const data = await response.json();
+      const meals = data.meals;
 
-async function fetchRecipe(ingredient) {
-  appendMessage("bot", "🔄 Searching recipes...");
+      // Remove "Loading..." message
+      const loadingMessages = document.querySelectorAll(".message.bot");
+      loadingMessages.forEach((msg) => {
+        if (msg.textContent.includes("Loading")) msg.remove();
+      });
 
-  try {
-    const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredient}`);
-    const data = await res.json();
-    chatContainer.lastChild.remove(); // Remove "loading..." message
-
-    if (!data.meals) {
-      appendMessage("bot", "❌ Sorry, I couldn't find any recipes for those ingredients.");
-      return;
-    }
-
-    let count = 1;
-    for (let meal of data.meals) {
-      const detailsRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`);
-      const detailsData = await detailsRes.json();
-      const details = detailsData.meals[0];
-
-      let ingredientsList = "";
-      for (let i = 1; i <= 20; i++) {
-        const ingredient = details[`strIngredient${i}`];
-        const measure = details[`strMeasure${i}`];
-        if (ingredient && ingredient.trim()) {
-          ingredientsList += `<li>${ingredient} - ${measure}</li>`;
-        }
+      if (!meals) {
+        appendMessage(
+          `Sorry, I couldn't find any recipes for those ingredients. 🍽️`,
+          "bot"
+        );
+        return;
       }
 
-      const recipeCard = `
-        <div class="recipe-card">
-          <h3>🍽️ Recipe ${count}: ${details.strMeal}</h3>
-          <img src="${details.strMealThumb}" alt="${details.strMeal}" />
-          <h4>Ingredients:</h4>
-          <ul>${ingredientsList}</ul>
-          <h4>Instructions:</h4>
-          <p>${details.strInstructions.replace(/\r\n/g, "<br>")}</p>
-        </div>
-      `;
+      // Limit to 3 meals for display
+      const limitedMeals = meals.slice(0, 3);
 
-      appendMessage("bot", recipeCard);
-      count++;
+      for (const meal of limitedMeals) {
+        const mealDetailsRes = await fetch(
+          `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`
+        );
+        const mealDetailsData = await mealDetailsRes.json();
+        const mealDetails = mealDetailsData.meals[0];
+
+        const ingredientsList = [];
+        for (let i = 1; i <= 20; i++) {
+          const ingredient = mealDetails[`strIngredient${i}`];
+          const measure = mealDetails[`strMeasure${i}`];
+          if (ingredient && ingredient.trim() !== "") {
+            ingredientsList.push(`• ${ingredient} - ${measure}`);
+          }
+        }
+
+        const recipeCard = `
+          <div class="recipe-card">
+            <h3>🍽️ ${mealDetails.strMeal}</h3>
+            <img src="${mealDetails.strMealThumb}" alt="Meal Image" />
+            <p><strong>Ingredients:</strong><br>${ingredientsList.join("<br>")}</p>
+            <p><strong>Instructions:</strong><br>${mealDetails.strInstructions}</p>
+          </div>
+        `;
+        appendMessage(recipeCard, "bot");
+      }
+    } catch (error) {
+      console.error("Error fetching recipes:", error);
+      appendMessage("Oops! Something went wrong. Please try again later. ❌", "bot");
     }
-  } catch (error) {
-    chatContainer.lastChild.remove(); // Remove loading message on error
-    appendMessage("bot", "⚠️ Something went wrong. Please try again.");
-    console.error(error);
   }
-}
+
+  function handleSend() {
+    const userText = userInput.value.trim();
+    if (userText === "") return;
+
+    appendMessage(userText, "user");
+    userInput.value = "";
+    fetchRecipes(userText);
+  }
+
+  sendBtn.addEventListener("click", handleSend);
+  userInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      handleSend();
+    }
+  });
+});
+
 
 
 
