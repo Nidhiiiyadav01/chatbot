@@ -1,7 +1,9 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
   const input = document.getElementById("userInput");
   const sendBtn = document.getElementById("sendBtn");
   const chatBody = document.querySelector(".chat-body");
+
+  let currentIngredients = "";
 
   function addMessage(sender, text) {
     const msg = document.createElement("div");
@@ -11,58 +13,80 @@ document.addEventListener("DOMContentLoaded", function () {
     chatBody.scrollTop = chatBody.scrollHeight;
   }
 
-  function loadingMessage() {
-    const msg = document.createElement("div");
-    msg.className = "message bot loading";
-    msg.textContent = "Loading...";
-    chatBody.appendChild(msg);
+  function addRecipeCard(title, image, instructions) {
+    const card = document.createElement("div");
+    card.className = "message bot";
+    card.innerHTML = `
+      <strong>${title}</strong><br/>
+      <img src="${image}" alt="${title}" style="max-width: 100%; border-radius: 10px; margin: 8px 0;" /><br/>
+      <p>${instructions}</p>
+    `;
+    chatBody.appendChild(card);
     chatBody.scrollTop = chatBody.scrollHeight;
-    return msg;
   }
 
-  function getBotReply(message) {
-    const msg = message.toLowerCase();
+  function showLoading() {
+    const loading = document.createElement("div");
+    loading.className = "message bot loading";
+    loading.textContent = "Loading recipe...";
+    chatBody.appendChild(loading);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return loading;
+  }
 
-    // Step 1: Veg/non-veg detection
-    if (msg.includes("veg") || msg.includes("vegetarian")) {
-      return "Got it! Please tell me the ingredients you have. 🥕🧄🧅";
-    }
-    if (msg.includes("non veg") || msg.includes("chicken") || msg.includes("egg") || msg.includes("meat")) {
-      return "Great! Send me the ingredients for your non-veg recipe. 🍗🍳";
-    }
+  async function fetchRecipe(ingredients, type) {
+    const loadingElem = showLoading();
+    let query = ingredients.split(",")[0].trim();
 
-    // Step 2: Ingredient-based responses
-    if (msg.includes("pasta") || msg.includes("tomato") || msg.includes("cheese")) {
-      return "Here's a simple pasta recipe:\n1. Boil pasta\n2. Sauté garlic and tomato\n3. Add cheese\n4. Mix and serve hot! 🍝";
-    } else if (msg.includes("egg") && msg.includes("bread")) {
-      return "Try this: Bread Egg Toast\n1. Beat eggs, add salt\n2. Dip bread\n3. Fry both sides till golden.";
-    } else if (msg.includes("paneer")) {
-      return "Make Paneer Bhurji:\n1. Crumble paneer\n2. Sauté onion, tomato\n3. Add paneer + spices\n4. Cook & serve!";
-    } else if (msg.includes("potato") || msg.includes("aloo")) {
-      return "Aloo Fry:\n1. Chop potatoes\n2. Fry in oil with spices (jeera, haldi, salt)\n3. Done! 🥔";
-    } else if (msg.includes("rice") || msg.includes("dal")) {
-      return "Dal Chawal:\n1. Cook rice separately\n2. Boil dal with salt, turmeric\n3. Temper with garlic, jeera, chili\n4. Serve hot!";
-    }
+    const url =
+      type.toLowerCase() === "veg"
+        ? `https://www.themealdb.com/api/json/v1/1/filter.php?i=${query}`
+        : `https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`;
 
-    // Default reply
-    return "Hmm... Tell me the ingredients (e.g. potato, paneer, tomato) and whether veg or non-veg. I’ll suggest a recipe!";
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      loadingElem.remove();
+
+      if (!data.meals || data.meals.length === 0) {
+        addMessage("bot", "Sorry, I couldn’t find a recipe with those ingredients.");
+        return;
+      }
+
+      const meal = data.meals[0];
+      const mealId = meal.idMeal;
+
+      const fullDetailsRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${mealId}`);
+      const fullDetailsData = await fullDetailsRes.json();
+      const mealDetails = fullDetailsData.meals[0];
+
+      addRecipeCard(mealDetails.strMeal, mealDetails.strMealThumb, mealDetails.strInstructions);
+    } catch (error) {
+      loadingElem.remove();
+      addMessage("bot", "Oops! Something went wrong.");
+    }
   }
 
   sendBtn.addEventListener("click", () => {
     const userMsg = input.value.trim();
-    if (userMsg === "") return;
+    if (!userMsg) return;
+
     addMessage("user", userMsg);
+
+    if (!currentIngredients) {
+      currentIngredients = userMsg;
+      addMessage("bot", "Got it! Is this for a vegetarian or non-vegetarian recipe?");
+    } else if (["veg", "non-veg", "vegetarian", "non vegetarian"].includes(userMsg.toLowerCase())) {
+      fetchRecipe(currentIngredients, userMsg);
+      currentIngredients = ""; // reset after recipe is fetched
+    } else {
+      addMessage("bot", "Please tell me the ingredients you'd like to cook with.");
+    }
+
     input.value = "";
-
-    const loading = loadingMessage();
-
-    setTimeout(() => {
-      chatBody.removeChild(loading);
-      const reply = getBotReply(userMsg);
-      addMessage("bot", reply);
-    }, 800);
   });
 });
+
 
 
 
