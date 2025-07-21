@@ -1,69 +1,49 @@
-const chatBody = document.querySelector(".chat-body");
-const userInput = document.getElementById("userInput");
-const sendBtn = document.getElementById("sendBtn");
+const chatContainer = document.querySelector(".chat-container");
+const userInput = document.getElementById("user-input");
+const sendButton = document.getElementById("send-btn");
 
-// Scroll to bottom helper
-const scrollToBottom = () => {
-  chatBody.scrollTop = chatBody.scrollHeight;
-};
-
-// Append message to chat
-function appendMessage(sender, text) {
-  const messageDiv = document.createElement("div");
-  messageDiv.classList.add("message", sender);
-  messageDiv.innerHTML = text;
-  chatBody.appendChild(messageDiv);
-  scrollToBottom();
-}
-
-// Handle Send Button
-sendBtn.addEventListener("click", () => {
+sendButton.addEventListener("click", () => {
   const input = userInput.value.trim();
   if (input) {
     appendMessage("user", input);
-    getRecipes(input);
+    fetchRecipe(input);
     userInput.value = "";
   }
 });
 
-// Also allow Enter key to send
-userInput.addEventListener("keydown", (e) => {
+userInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
-    sendBtn.click();
+    sendButton.click();
   }
 });
 
-// Get Recipes from TheMealDB
-async function getRecipes(ingredient) {
-  appendMessage("bot", "🔍 Searching recipes...");
-  try {
-    const response = await fetch(
-      `https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredient}`
-    );
-    const data = await response.json();
+function appendMessage(sender, message) {
+  const messageDiv = document.createElement("div");
+  messageDiv.classList.add("message", `${sender}-message`);
+  messageDiv.innerHTML = message;
+  chatContainer.appendChild(messageDiv);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
 
-    // Remove loading message
-    const loadingMessages = document.querySelectorAll(".bot");
-    if (loadingMessages.length) {
-      const lastMsg = loadingMessages[loadingMessages.length - 1];
-      if (lastMsg.textContent.includes("Searching recipes")) {
-        lastMsg.remove();
-      }
-    }
+async function fetchRecipe(ingredient) {
+  appendMessage("bot", "🔄 Searching recipes...");
+
+  try {
+    const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredient}`);
+    const data = await res.json();
+    chatContainer.lastChild.remove(); // Remove "loading..." message
 
     if (!data.meals) {
-      appendMessage("bot", `😔 Sorry, I couldn't find any recipes for those ingredients.`);
+      appendMessage("bot", "❌ Sorry, I couldn't find any recipes for those ingredients.");
       return;
     }
 
-    for (let meal of data.meals.slice(0, 3)) {
-      const detailsRes = await fetch(
-        `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`
-      );
+    let count = 1;
+    for (let meal of data.meals) {
+      const detailsRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`);
       const detailsData = await detailsRes.json();
       const details = detailsData.meals[0];
 
-      // Get ingredients
       let ingredientsList = "";
       for (let i = 1; i <= 20; i++) {
         const ingredient = details[`strIngredient${i}`];
@@ -73,24 +53,27 @@ async function getRecipes(ingredient) {
         }
       }
 
-      // Create recipe card
       const recipeCard = `
         <div class="recipe-card">
-          <h3>🍽️ ${details.strMeal}</h3>
+          <h3>🍽️ Recipe ${count}: ${details.strMeal}</h3>
           <img src="${details.strMealThumb}" alt="${details.strMeal}" />
-          <p><strong>Ingredients:</strong></p>
+          <h4>Ingredients:</h4>
           <ul>${ingredientsList}</ul>
-          <p><strong>Instructions:</strong><br>${details.strInstructions}</p>
+          <h4>Instructions:</h4>
+          <p>${details.strInstructions.replace(/\r\n/g, "<br>")}</p>
         </div>
       `;
 
       appendMessage("bot", recipeCard);
+      count++;
     }
   } catch (error) {
-    console.error("Error fetching recipe:", error);
-    appendMessage("bot", "❌ Oops! Something went wrong while fetching the recipes.");
+    chatContainer.lastChild.remove(); // Remove loading message on error
+    appendMessage("bot", "⚠️ Something went wrong. Please try again.");
+    console.error(error);
   }
 }
+
 
 
 
