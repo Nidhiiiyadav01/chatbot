@@ -3,13 +3,13 @@ document.getElementById("sendBtn").addEventListener("click", () => {
   const message = input.value.trim();
   if (message) {
     addMessage("user", message);
-    respondToUser(message);
+    fetchRecipe(message);  // <-- Fetch from TheMealDB
     input.value = "";
   }
 });
 
 function addMessage(sender, text) {
-  const chatBody = document.getElementById("chatBody");
+  const chatBody = document.querySelector(".chat-body");
   const msgDiv = document.createElement("div");
   msgDiv.classList.add("message", sender);
   msgDiv.textContent = text;
@@ -17,18 +17,22 @@ function addMessage(sender, text) {
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-function respondToUser(message) {
-  let response = "";
-
-  if (message.toLowerCase().includes("pasta")) {
-    response = "Here's a simple pasta recipe: Boil pasta, sauté garlic in olive oil, add tomatoes and mix with pasta.";
-  } else if (message.toLowerCase().includes("egg")) {
-    response = "You can make a classic omelette: beat eggs, add salt, pour in pan, flip once, and serve hot!";
-  } else if (message.toLowerCase().includes("paneer")) {
-    response = "Try making Paneer Bhurji: crumble paneer, cook with onions, tomatoes, and spices.";
-  } else {
-    response = "Sorry, I'm still learning! Try asking for a recipe with pasta, egg, or paneer.";
-  }
-
-  setTimeout(() => addMessage("bot", response), 600);
+// 🔥 New function to fetch recipe
+function fetchRecipe(ingredient) {
+  fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredient}`)
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.meals) {
+        const meal = data.meals[0]; // take the first meal
+        const reply = `🍽 Try this: ${meal.strMeal}\n👀 View here: ${meal.strMealThumb}`;
+        addMessage("bot", reply);
+      } else {
+        addMessage("bot", "❌ Sorry, no recipe found with that ingredient.");
+      }
+    })
+    .catch((error) => {
+      console.error("API error:", error);
+      addMessage("bot", "⚠️ Something went wrong. Try again later.");
+    });
 }
+
