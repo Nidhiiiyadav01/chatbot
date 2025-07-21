@@ -1,44 +1,39 @@
-const chatBody = document.querySelector(".chat-body");
-const userInput = document.getElementById("userInput");
-const sendBtn = document.getElementById("sendBtn");
+document.getElementById("sendBtn").addEventListener("click", async function () {
+  const userInput = document.getElementById("userInput").value;
+  if (!userInput) return;
 
-const API_URL = "https://www.themealdb.com/api/json/v1/1/filter.php?i=";
+  addMessage("user", userInput);
+  document.getElementById("userInput").value = "";
 
-function appendMessage(sender, text) {
+  try {
+    const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${userInput}`);
+    const data = await response.json();
+
+    if (data.meals) {
+      const meal = data.meals[0]; // take first meal from result
+      const message = `
+        <strong>${meal.strMeal}</strong><br/>
+        <img src="${meal.strMealThumb}" alt="${meal.strMeal}" style="width:200px; border-radius:10px; margin-top:5px;" />
+      `;
+      addMessage("bot", message);
+    } else {
+      addMessage("bot", "Sorry, I couldn't find any recipes for those ingredients. 🍽️");
+    }
+  } catch (error) {
+    console.error(error);
+    addMessage("bot", "Oops! Something went wrong. Please try again later.");
+  }
+});
+
+function addMessage(sender, text) {
+  const chatBody = document.querySelector(".chat-body");
   const messageDiv = document.createElement("div");
-  messageDiv.classList.add("message", sender);
-  messageDiv.innerText = text;
+  messageDiv.className = `message ${sender}`;
+  messageDiv.innerHTML = text;
   chatBody.appendChild(messageDiv);
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-async function fetchMealFromAPI(ingredient) {
-  try {
-    const response = await fetch(`${API_URL}${ingredient}`);
-    const data = await response.json();
-
-    if (!data.meals) {
-      appendMessage("bot", "Sorry, I couldn't find a recipe with that ingredient.");
-      return;
-    }
-
-    const meal = data.meals[0];
-    const recipeText = `🍽️ ${meal.strMeal}\n\nYou can view it here:\n${meal.strMealThumb}`;
-    appendMessage("bot", recipeText);
-  } catch (error) {
-    console.error(error);
-    appendMessage("bot", "Oops! Something went wrong.");
-  }
-}
-
-sendBtn.addEventListener("click", () => {
-  const input = userInput.value.trim();
-  if (input) {
-    appendMessage("user", input);
-    fetchMealFromAPI(input.toLowerCase());
-    userInput.value = "";
-  }
-});
 
 
 
