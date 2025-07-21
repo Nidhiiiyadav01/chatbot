@@ -1,107 +1,79 @@
 body {
-  font-family: 'Poppins', sans-serif;
-  background-color: #fff8f2;
   margin: 0;
   padding: 0;
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(to right, #000000, #4b0000);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
 }
 
 .chat-container {
-  max-width: 400px;
-  margin: 40px auto;
-  border-radius: 20px;
+  background-color: #fff;
+  width: 400px;
+  border-radius: 15px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-header {
-  background: linear-gradient(to right, #000000, #800000);
-  color: white;
-  text-align: center;
+  background-color: #800000;
+  color: #fff;
   padding: 20px;
-}
-
-.chat-header h2 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.chat-header p {
-  margin: 5px 0 0;
-  font-size: 16px;
+  text-align: center;
 }
 
 .chat-body {
   padding: 15px;
-  height: 400px;
+  height: 350px;
   overflow-y: auto;
-  background-color: #fffdf9;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: #f9f9f9;
 }
 
 .message {
   padding: 10px 15px;
   border-radius: 15px;
-  margin: 10px 0;
   max-width: 80%;
   word-wrap: break-word;
+  line-height: 1.4;
 }
 
-.message.user {
-  background-color: #d6f0e0;
+.user {
+  background-color: #d1e7dd;
   align-self: flex-end;
-  margin-left: auto;
+  text-align: right;
 }
 
-.message.bot {
-  background-color: #fddede;
+.bot {
+  background-color: #f8d7da;
   align-self: flex-start;
-  margin-right: auto;
 }
 
 .chat-footer {
   display: flex;
-  border-top: 1px solid #eee;
-  padding: 10px;
-  background-color: white;
+  border-top: 1px solid #ccc;
 }
 
-#userInput {
+.chat-footer input {
   flex: 1;
   padding: 10px;
   border: none;
-  border-radius: 5px 0 0 5px;
+  outline: none;
   font-size: 16px;
 }
 
-#sendBtn {
-  padding: 0 20px;
+.chat-footer button {
   background-color: #800000;
   color: white;
   border: none;
-  border-radius: 0 5px 5px 0;
+  padding: 10px 15px;
   cursor: pointer;
-}
-
-.recipe-card {
-  background-color: #fddede;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 10px;
-}
-
-.recipe-card h3 {
-  margin: 0 0 10px;
-  font-size: 18px;
-}
-
-.recipe-card img {
-  width: 100%;
-  border-radius: 10px;
-  margin-bottom: 10px;
-}
-
-.recipe-card p {
-  margin: 0;
-  font-size: 14px;
 }
 
 
