@@ -1,81 +1,90 @@
-// chatbot.js
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("userInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const chatBody = document.querySelector(".chat-body");
 
-const chatBody = document.querySelector('.chat-body');
-const userInput = document.getElementById('userInput');
-const sendBtn = document.getElementById('sendBtn');
+  let currentIngredients = "";
 
-// ✅ Helper to append messages
-function appendMessage(sender, message) {
-  const msgDiv = document.createElement('div');
-  msgDiv.classList.add('message', sender);
-  msgDiv.innerHTML = message;
-  chatBody.appendChild(msgDiv);
-  chatBody.scrollTop = chatBody.scrollHeight;
-}
-
-// ✅ Add loading message
-function showLoading() {
-  appendMessage('bot', 'Loading recipes... 🍳');
-}
-
-// ✅ Replace loading message
-function replaceLoading(newContent) {
-  const messages = document.querySelectorAll('.message.bot');
-  const lastMsg = messages[messages.length - 1];
-  if (lastMsg && lastMsg.innerText === 'Loading recipes... 🍳') {
-    lastMsg.innerHTML = newContent;
-  } else {
-    appendMessage('bot', newContent);
+  function addMessage(sender, text) {
+    const msg = document.createElement("div");
+    msg.className = `message ${sender}`;
+    msg.textContent = text;
+    chatBody.appendChild(msg);
+    chatBody.scrollTop = chatBody.scrollHeight;
   }
-}
 
-// ✅ API Call
-async function fetchRecipes(ingredientList, isVeg) {
-  const type = isVeg ? 'vegetarian' : 'non_vegetarian';
-  try {
-    const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientList}`);
-    const data = await response.json();
+  function addRecipeCard(title, image, instructions) {
+    const card = document.createElement("div");
+    card.className = "message bot";
+    card.innerHTML = `
+      <strong>${title}</strong><br/>
+      <img src="${image}" alt="${title}" style="max-width: 100%; border-radius: 10px; margin: 8px 0;" /><br/>
+      <p>${instructions}</p>
+    `;
+    chatBody.appendChild(card);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
 
-    if (data.meals) {
-      let html = `<strong>Here are some ${type} recipes:</strong><br><br>`;
-      data.meals.slice(0, 3).forEach(meal => {
-        html += `🍽️ <strong>${meal.strMeal}</strong><br>`;
-        html += `<img src="${meal.strMealThumb}" width="200"/><br><br>`;
-      });
-      return html;
-    } else {
-      return "Sorry, I couldn't find any recipes for those ingredients. 🍽️";
+  function showLoading() {
+    const loading = document.createElement("div");
+    loading.className = "message bot loading";
+    loading.textContent = "Loading recipe...";
+    chatBody.appendChild(loading);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return loading;
+  }
+
+  async function fetchRecipe(ingredients, type) {
+    const loadingElem = showLoading();
+    let query = ingredients.split(",")[0].trim();
+
+    const url =
+      type.toLowerCase() === "veg"
+        ? `https://www.themealdb.com/api/json/v1/1/filter.php?i=${query}`
+        : `https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      loadingElem.remove();
+
+      if (!data.meals || data.meals.length === 0) {
+        addMessage("bot", "Sorry, I couldn’t find a recipe with those ingredients.");
+        return;
+      }
+
+      const meal = data.meals[0];
+      const mealId = meal.idMeal;
+
+      const fullDetailsRes = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${mealId}`);
+      const fullDetailsData = await fullDetailsRes.json();
+      const mealDetails = fullDetailsData.meals[0];
+
+      addRecipeCard(mealDetails.strMeal, mealDetails.strMealThumb, mealDetails.strInstructions);
+    } catch (error) {
+      loadingElem.remove();
+      addMessage("bot", "Oops! Something went wrong.");
     }
-  } catch (error) {
-    return "Something went wrong! Please try again later. ❌";
-  }
-}
-
-// ✅ Ask veg/non-veg first, then recipe
-let isAskingDiet = false;
-let tempIngredients = '';
-
-sendBtn.addEventListener('click', async () => {
-  const userMsg = userInput.value.trim();
-  if (!userMsg) return;
-
-  appendMessage('user', userMsg);
-  userInput.value = '';
-
-  // 🔁 Check if asking for veg/non-veg
-  if (!isAskingDiet) {
-    tempIngredients = userMsg;
-    isAskingDiet = true;
-    appendMessage('bot', 'Would you like vegetarian or non-vegetarian recipes?');
-    return;
   }
 
-  const preference = userMsg.toLowerCase();
-  const isVeg = preference.includes('veg');
-  showLoading();
+  sendBtn.addEventListener("click", () => {
+    const userMsg = input.value.trim();
+    if (!userMsg) return;
 
-  const reply = await fetchRecipes(tempIngredients, isVeg);
-  replaceLoading(reply);
-  isAskingDiet = false;
+    addMessage("user", userMsg);
+
+    if (!currentIngredients) {
+      currentIngredients = userMsg;
+      addMessage("bot", "Got it! Is this for a vegetarian or non-vegetarian recipe?");
+    } else if (["veg", "non-veg", "vegetarian", "non vegetarian"].includes(userMsg.toLowerCase())) {
+      fetchRecipe(currentIngredients, userMsg);
+      currentIngredients = ""; // reset after recipe is fetched
+    } else {
+      addMessage("bot", "Please tell me the ingredients you'd like to cook with.");
+    }
+
+    input.value = "";
+  });
 });
+
 
