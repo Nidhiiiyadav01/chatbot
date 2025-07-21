@@ -1,39 +1,41 @@
-document.getElementById("sendBtn").addEventListener("click", async function () {
-  const userInput = document.getElementById("userInput").value;
-  if (!userInput) return;
-
-  addMessage("user", userInput);
-  document.getElementById("userInput").value = "";
-
-  try {
-    const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${userInput}`);
-    const data = await response.json();
-
-    if (data.meals) {
-      const meal = data.meals[0]; // take first meal from result
-      const message = `
-        <strong>${meal.strMeal}</strong><br/>
-        <img src="${meal.strMealThumb}" alt="${meal.strMeal}" style="width:200px; border-radius:10px; margin-top:5px;" />
-      `;
-      addMessage("bot", message);
-    } else {
-      addMessage("bot", "Sorry, I couldn't find any recipes for those ingredients. 🍽️");
-    }
-  } catch (error) {
-    console.error(error);
-    addMessage("bot", "Oops! Something went wrong. Please try again later.");
+document.getElementById("sendBtn").addEventListener("click", () => {
+  const input = document.getElementById("userInput");
+  const message = input.value.trim();
+  if (message) {
+    addMessage("user", message);
+    respondToUser(message);
+    input.value = "";
   }
 });
 
 function addMessage(sender, text) {
-  const chatBody = document.querySelector(".chat-body");
-  const messageDiv = document.createElement("div");
-  messageDiv.className = `message ${sender}`;
-  messageDiv.innerHTML = text;
-  chatBody.appendChild(messageDiv);
+  const chatBody = document.getElementById("chatBody");
+  const msgDiv = document.createElement("div");
+  msgDiv.classList.add("message", sender);
+  msgDiv.innerHTML = text; // 👈 Important: allows HTML like images
+  chatBody.appendChild(msgDiv);
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 
+function respondToUser(message) {
+  const apiUrl = `https://www.themealdb.com/api/json/v1/1/filter.php?i=${encodeURIComponent(message)}`;
 
-
-
+  fetch(apiUrl)
+    .then(response => response.json())
+    .then(data => {
+      if (data.meals && data.meals.length > 0) {
+        const recipe = data.meals[0];
+        const response = `
+          <strong>${recipe.strMeal}</strong><br>
+          <img src="${recipe.strMealThumb}" alt="${recipe.strMeal}" width="250" />
+        `;
+        addMessage("bot", response);
+      } else {
+        addMessage("bot", "Sorry, I couldn't find any recipes for those ingredients. 🍽️");
+      }
+    })
+    .catch(error => {
+      console.error("API Error:", error);
+      addMessage("bot", "Oops! Something went wrong while fetching recipes. 😓");
+    });
+}
